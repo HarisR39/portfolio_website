@@ -2,19 +2,50 @@
 // app/page.tsx
 import dynamic from 'next/dynamic'
 import type { ComponentType } from 'react'
+import { useEffect, useMemo, useState } from "react"
 
-// Dynamic import with SSR disabled (prevents server-side render errors)
-const FaultyTerminal = dynamic(() => import('../components/FaultyTerminal'), { ssr: false }) as unknown as ComponentType<any>
-const TextType = dynamic(() => import('../components/TextType'), { ssr: false }) as unknown as ComponentType<any>
-const DecryptedText = dynamic(() => import('../components/DecryptedText'), { ssr: false }) as unknown as ComponentType<any>
+const LoadingSplash = () => (
+  <div className="loading-splash" role="status" aria-live="polite">
+    <span className="loading-text">Booting terminal...</span>
+  </div>
+)
+
+const FaultyTerminal = dynamic(() => import('../components/FaultyTerminal'), {
+  ssr: false,
+  loading: () => <LoadingSplash />,
+}) as unknown as ComponentType<any>
+
+const TextType = dynamic(() => import('../components/TextType'), {
+  ssr: false,
+  loading: () => null,
+}) as unknown as ComponentType<any>
+
+const DecryptedText = dynamic(() => import('../components/DecryptedText'), {
+  ssr: false,
+  loading: () => null,
+}) as unknown as ComponentType<any>
+
 
 export default function Home() {
+
+  const gridMul = useMemo(() => [2, 1] as const, [])
+  const [showAbout, setShowAbout] = useState(false)
+  useEffect(() => {
+  const aboutTimer = setTimeout(() => {
+    setShowAbout(true)
+  }, 1000)
+  return () => {
+    clearTimeout(aboutTimer)
+  }
+  }, [])
+
   return (
+    
     <div className="background">
       <div className="wall">
         <FaultyTerminal
           scale={2}
-          gridMul={[2, 1]}
+          gridMul={gridMul}
           digitSize={1.5}
           timeScale={0.5}
           pause={false}
@@ -31,15 +62,29 @@ export default function Home() {
           pageLoadAnimation={true}
           brightness={1}
         />
+        <div className="terminal-overlay"/>
       </div>
-      <div className="welcome">
-        <span className="welcome-line">
+      <div className="name">
+        <span className="name-line">
           <DecryptedText text="Harishankar" animateOn="view" revealDirection="center" speed={150} />
         </span>
-        <span className="welcome-line">
+        <span className="name-line">
           <DecryptedText text="Rajesh" animateOn="view" revealDirection="center" speed={150} />
         </span>
       </div>
+
+      {showAbout && (
+        <div className="about_me">  
+          <TextType 
+            text={["Freshman @ UF.", "Python Enthusiast.", "The Weeknd Fanatic.", "Loves Coding <3.",]}
+            typingSpeed={50}
+            pauseDuration={1000}
+            showCursor={true}
+            cursorCharacter="_"
+          />
+        </div>
+      )}
+
     </div>
   )
 }

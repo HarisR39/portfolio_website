@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Quicksand } from "next/font/google";
+import { Quicksand, VT323 } from "next/font/google";
 import "./globals.css";
 
 const quicksand = Quicksand({
   weight: ["700"],
   subsets: ["latin"],
   variable: "--font-quicksand",
+});
+
+const vt323 = VT323({
+  weight: ["400"],
+  subsets: ["latin"],
+  variable: "--font-vt323",
 });
 
 export const metadata: Metadata = {
@@ -20,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${quicksand.variable} antialiased`}> 
+      <body className={`${quicksand.variable} ${vt323.variable} antialiased`}> 
         {children}
       </body>
     </html>
