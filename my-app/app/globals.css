@@ -6,6 +6,9 @@
 
 html, body, #__next {
   height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 body {
@@ -14,33 +17,102 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-quicksand), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  overflow: hidden;
 }
 
 .container {
-  min-height: 100vh;
+  position: absolute;
+  width: 100%;
+  height: 100%;
   display: flex;
-  justify-content: center; /* horizontal center */
-  align-items: flex-start; /* top area */
-  padding-top: 8vh; /* move down from top */
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
   z-index: 2;
 }
 
 .background {
-  min-height: 100vh;
   display: flex;
-  justify-content: center; /* horizontal center */
-  align-items: flex-start; /* top area */
-  z-index: 1;
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  justify-content: center; 
+  align-items: center; 
+  z-index: 0;
+  background: rgb(6, 0, 16);
+  overflow: hidden;
+}
+
+.wall {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.wall > * {
+  width: 100%;
+  height: 100%;
+}
+
+.terminal {
+  width: 100%;
+  height: 100%;
+}
+
+.terminal canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+canvas {
+  display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.welcome-line {
+  display: block;
+  white-space: nowrap;
 }
 
 .welcome {
-  color: var(--fg);
-  font-size: 6rem;
-  font-weight: 700;
+  position: absolute;
+  left: 50%;
+  top: 25%;
+  transform: translate(-50%, -12vh);
+  display: block;
+  font-family: 'League Spartan', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(3rem, 10.5vw, 7.5rem);
+  line-height: 0.85;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
   margin: 0;
+  color: #ffffff;
   text-align: center;
-  z-index: 3;
+  margin-top: 16px;
+  margin-bottom: 0;
+  /*text-shadow: rgba(187, 187, 187, 0.5) 0px 0px 16px;*/
+  z-index: 10;
+  pointer-events: none;
 }
+
+
 
 @keyframes gradient-shift {
   0% {
