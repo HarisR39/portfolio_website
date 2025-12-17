@@ -1,0 +1,55 @@
+:root {
+  --bg: #000000;
+  --fg: #ffffff;
+  --font-quicksand: var(--font-quicksand);
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-quicksand), system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+.container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center; /* horizontal center */
+  align-items: flex-start; /* top area */
+  padding-top: 8vh; /* move down from top */
+  z-index: 2;
+}
+
+.background {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center; /* horizontal center */
+  align-items: flex-start; /* top area */
+  z-index: 1;
+}
+
+.welcome {
+  color: var(--fg);
+  font-size: 6rem;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  z-index: 3;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
