@@ -26,13 +26,23 @@ const DecryptedText = dynamic(() => import('../components/DecryptedText'), {
   loading: () => null,
 }) as unknown as ComponentType<any>
 
-
 export default function Home() {
 
+  // Adjust this to move the reference point for the glowing line and activation (0 = top, 1 = bottom of viewport).
+  const timelineRefRatio = 0.6
   const pageRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLElement | null>(null)
+  const timelineRef = useRef<HTMLElement | null>(null)
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
   const timelineEntries = useMemo(
     () => [
+      {
+        period: "Spring 2025",
+        title: "Systems & data structures sprint",
+        detail:
+          "Building deeper CS fundamentals through projects in algorithms, data structures, and low-level programming.",
+      },
       {
         period: "Fall 2024",
         title: "Started at UF for Computer Science",
@@ -45,12 +55,17 @@ export default function Home() {
         detail: "Combined React, TypeScript, and creative coding shaders to ship playful UI experiments.",
       },
       {
-        period: "2023",
+        period: "Fall 2023",
         title: "Automated workflows with Python",
         detail: "Created scripts to streamline daily tasks, practice data processing, and explore APIs.",
       },
       {
-        period: "2022",
+        period: "Summer 2023",
+        title: "Creative coding experiments",
+        detail: "Explored shaders, generative visuals, and playful UI concepts to keep design instincts sharp.",
+      },
+      {
+        period: "2022 Fall",
         title: "Robotics & maker projects",
         detail: "Learned hands-on electronics and collaborative problem solving through hardware builds.",
       },
@@ -87,12 +102,52 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window === "undefined") return
-
     const handleScroll = () => {
       const heroHeight = Math.max(heroRef.current?.offsetHeight ?? 0, window.innerHeight)
+      const timelineTop = timelineRef.current?.offsetTop ?? heroHeight
+      const timelineHeight = timelineRef.current?.offsetHeight ?? 1
+      const probe = window.scrollY + window.innerHeight * timelineRefRatio
+      const progressRaw = (probe - timelineTop) / timelineHeight
+      const scrollProgress = Math.min(Math.max(progressRaw, 0), 1)
+      const visibleTop = timelineTop - window.scrollY
+      const fillPx = Math.min(
+        Math.max(window.innerHeight * timelineRefRatio - visibleTop, 0),
+        timelineHeight
+      )
       const progress = Math.min(Math.max(window.scrollY / (heroHeight * 0.6), 0), 1)
       const eased = Math.pow(progress, 0.8)
+      const veilStart = heroHeight * 0.55
+      const veilEnd = timelineTop - window.innerHeight * 0.35
+      const veilRaw = (window.scrollY - veilStart) / Math.max(veilEnd - veilStart, 1)
+      const veilProgress = Math.min(Math.max(veilRaw, 0), 1)
+      const veilEased = Math.pow(veilProgress, 0.7)
+      // Pick the item whose center is closest to the shared reference line for consistent activation with the glow.
+      let closestIdx = activeIndex
+      let closestDelta = Number.POSITIVE_INFINITY
+      const probeY = window.scrollY + window.innerHeight * timelineRefRatio
+      itemRefs.current.forEach((el, idx) => {
+        if (!el) return
+        const rect = el.getBoundingClientRect()
+        const center = rect.top + window.scrollY + rect.height * 0.5
+        const delta = Math.abs(center - probeY)
+        if (delta < closestDelta) {
+          closestDelta = delta
+          closestIdx = idx
+        }
+      })
+      if (closestIdx !== activeIndex) setActiveIndex(closestIdx)
+      const lastEl = itemRefs.current[timelineEntries.length - 1]
+      const lastCenter = lastEl
+        ? (lastEl.getBoundingClientRect().top + window.scrollY + lastEl.getBoundingClientRect().height * 0.5) - timelineTop
+        : timelineHeight
+      const fillMax = Math.min(Math.max(lastCenter, 0), timelineHeight)
+      const fillClamped = Math.min(fillPx, fillMax)
       pageRef.current?.style.setProperty("--scroll-progress", eased.toString())
+      pageRef.current?.style.setProperty("--veil-progress", veilEased.toString())
+      pageRef.current?.style.setProperty("--timeline-progress", scrollProgress.toString())
+      pageRef.current?.style.setProperty("--timeline-fill-px", `${fillPx}px`)
+      pageRef.current?.style.setProperty("--timeline-fill-max", `${fillMax}px`)
+      pageRef.current?.style.setProperty("--timeline-fill-clamped", `${fillClamped}px`)
     }
 
     handleScroll()
@@ -101,6 +156,24 @@ export default function Home() {
       window.removeEventListener("scroll", handleScroll)
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = Number((entry.target as HTMLElement).dataset.index)
+            if (!Number.isNaN(idx)) setActiveIndex(idx)
+          }
+        })
+      },
+      { rootMargin: "-35% 0px -35% 0px", threshold: 0.25 }
+    )
+
+    itemRefs.current.forEach((el) => el && observer.observe(el))
+    return () => observer.disconnect()
+  }, [timelineEntries.length])
 
   return (
     <div className="page" id="top" ref={pageRef}>
@@ -148,6 +221,8 @@ export default function Home() {
         </div>
       </div>
 
+      <div className="parallax-veil" aria-hidden="true" />
+
       <main className="content">
         <section className="hero" aria-label="Intro" ref={heroRef}>
           <div className="name">
@@ -172,14 +247,20 @@ export default function Home() {
           )}
         </section>
 
-        <section id="timeline" className="section timeline-section">
+        <section id="timeline" className="section timeline-section" ref={timelineRef}>
           <h2 className="section-title">Timeline</h2>
           <div className="timeline-wrapper" aria-label="Milestones">
             <div className="timeline-line" aria-hidden="true" />
             <ul className="timeline-list">
-              {timelineEntries.map((entry) => (
-                <li className="timeline-item" key={entry.period}>
+              {timelineEntries.map((entry, idx) => (
+                <li
+                  className={`timeline-item ${activeIndex === idx ? "is-active" : ""}`}
+                  key={entry.period}
+                  data-index={idx}
+                  ref={(el) => (itemRefs.current[idx] = el)}
+                >
                   <span className="timeline-marker" aria-hidden="true" />
+                  <span className="timeline-floating-date">{entry.period}</span>
                   <div className="timeline-content">
                     <span className="timeline-date">{entry.period}</span>
                     <h3 className="timeline-title">{entry.title}</h3>
