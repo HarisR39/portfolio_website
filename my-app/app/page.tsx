@@ -38,36 +38,36 @@ export default function Home() {
   const timelineEntries = useMemo(
     () => [
       {
-        period: "Spring 2025",
-        title: "Systems & data structures sprint",
+        period: "WINTER 2025",
+        title: "Started Devloping My First Website",
+        detail: "Started Developing My First Website. Began building the personal portfolio you’re viewing now, using it to showcase projects and experiences.",
+      },
+      {
+        period: "FALL 2025",
+        title: "Started Studying Comp Sci @ UF",
         detail:
-          "Building deeper CS fundamentals through projects in algorithms, data structures, and low-level programming.",
+          "Began my Computer Science degree at the University of Florida. My first semester consisted of Advanced Programming, Calculus III, and Discrete Structures, while also participating in my first hackathon. This set the tone for a hands-on, technically focused CS journey.",
       },
       {
-        period: "Fall 2024",
-        title: "Started at UF for Computer Science",
+        period: "SUMMER 2025",
+        title: "Graduated from Highschool/Started My Second Job",
         detail:
-          "Diving into algorithms, data structures, and systems programming while building a strong math foundation.",
+          "Graduated from high school and started my second job as a Code Ninjas instructor. I competed in district, state, and national programming competitions, earning multiple first-place finishes, while taking 13 AP classes and graduating 11th in my class.",
       },
       {
-        period: "Summer 2024",
-        title: "Built terminal-inspired web experiences",
-        detail: "Combined React, TypeScript, and creative coding shaders to ship playful UI experiments.",
+        period: "FALL 2024",
+        title: "Became My FBLA Chapter President",
+        detail: "Became President of my FBLA chapter. Led the chapter through competitive events and placed first at the district level.",
       },
       {
-        period: "Fall 2023",
-        title: "Automated workflows with Python",
-        detail: "Created scripts to streamline daily tasks, practice data processing, and explore APIs.",
+        period: "SUMMER 2023",
+        title: "Competed at the National Level",
+        detail: "Competed at the National Level. Advanced through district and state competitions to attend the national conference in Atlanta, Georgia, where I met people I still stay in touch with today.",
       },
       {
-        period: "Summer 2023",
-        title: "Creative coding experiments",
-        detail: "Explored shaders, generative visuals, and playful UI concepts to keep design instincts sharp.",
-      },
-      {
-        period: "2022 Fall",
-        title: "Robotics & maker projects",
-        detail: "Learned hands-on electronics and collaborative problem solving through hardware builds.",
+        period: "FALL 2021",
+        title: "Started High School",
+        detail: "Started High School at River Ride High School. Began exploring academic interests and extracurriculars that shaped my later focus in computer science.",
       },
     ],
     []
