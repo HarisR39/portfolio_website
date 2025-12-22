@@ -16,6 +16,7 @@ html {
   position: relative;
   --scroll-progress: 0;
   --veil-progress: 0;
+  --projects-veil-progress: 0;
 }
 
 .nav-holder {
@@ -109,6 +110,18 @@ html {
   z-index: 0;
   pointer-events: none;
   mix-blend-mode: normal;
+}
+
+.projects-veil {
+  position: fixed;
+  inset: 0;
+  background: #000000;
+  transform-origin: center bottom;
+  transform: translateY(calc((1 - var(--projects-veil-progress)) * 100%));
+  opacity: clamp(var(--projects-veil-progress), 0, 1);
+  transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .wall {

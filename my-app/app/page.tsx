@@ -3,7 +3,30 @@
 import dynamic from 'next/dynamic'
 import type { ComponentType } from 'react'
 import { useEffect, useMemo, useRef, useState } from "react"
-import PillNav from "../components/PillNav"
+import PillNavRaw from "../components/PillNav"
+
+type PillNavItem = { href: string; label: string; ariaLabel?: string }
+
+type PillNavProps = {
+  logo: string
+  logoAlt?: string
+  items: PillNavItem[]
+  activeHref?: string
+  className?: string
+  ease?: string
+  baseColor?: string
+  pillColor?: string
+  hoveredPillTextColor?: string
+  pillTextColor?: string
+  navHeight?: number
+  logoSize?: number
+  pillGap?: number
+  pillPadX?: number
+  onMobileMenuClick?: () => void
+  initialLoadAnimation?: boolean
+}
+
+const PillNav = PillNavRaw as ComponentType<PillNavProps>
 
 const LoadingSplash = () => (
   <div className="loading-splash" role="status" aria-live="polite">
@@ -33,6 +56,7 @@ export default function Home() {
   const pageRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLElement | null>(null)
   const timelineRef = useRef<HTMLElement | null>(null)
+  const projectsRef = useRef<HTMLElement | null>(null)
   const itemRefs = useRef<(HTMLLIElement | null)[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
   const timelineEntries = useMemo(
@@ -110,6 +134,12 @@ export default function Home() {
       const progressRaw = (probe - timelineTop) / timelineHeight
       const scrollProgress = Math.min(Math.max(progressRaw, 0), 1)
       const visibleTop = timelineTop - window.scrollY
+      const projectsTop = projectsRef.current?.offsetTop ?? timelineTop + timelineHeight
+      const wallStart = (timelineTop + timelineHeight) - window.innerHeight * 0.35
+      const wallEnd = projectsTop - window.innerHeight * 0.2
+      const wallRaw = (window.scrollY - wallStart) / Math.max(wallEnd - wallStart, 1)
+      const wallProgress = Math.min(Math.max(wallRaw, 0), 1)
+      const wallEased = Math.pow(wallProgress, 0.72)
       const fillPx = Math.min(
         Math.max(window.innerHeight * timelineRefRatio - visibleTop, 0),
         timelineHeight
@@ -148,6 +178,7 @@ export default function Home() {
       pageRef.current?.style.setProperty("--timeline-fill-px", `${fillPx}px`)
       pageRef.current?.style.setProperty("--timeline-fill-max", `${fillMax}px`)
       pageRef.current?.style.setProperty("--timeline-fill-clamped", `${fillClamped}px`)
+      pageRef.current?.style.setProperty("--projects-veil-progress", wallEased.toString())
     }
 
     handleScroll()
@@ -222,6 +253,7 @@ export default function Home() {
       </div>
 
       <div className="parallax-veil" aria-hidden="true" />
+      <div className="projects-veil" aria-hidden="true" />
 
       <main className="content">
         <section className="hero" aria-label="Intro" ref={heroRef}>
@@ -257,7 +289,9 @@ export default function Home() {
                   className={`timeline-item ${activeIndex === idx ? "is-active" : ""}`}
                   key={entry.period}
                   data-index={idx}
-                  ref={(el) => (itemRefs.current[idx] = el)}
+                  ref={(el) => {
+                    itemRefs.current[idx] = el
+                  }}
                 >
                   <span className="timeline-marker" aria-hidden="true" />
                   <span className="timeline-floating-date">{entry.period}</span>
@@ -272,7 +306,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="projects" className="section projects-section">
+        <section id="projects" className="section projects-section" ref={projectsRef}>
           <h2 className="section-title">Projects</h2>
           <p className="section-text">
             A mix of personal builds and class work: terminal-inspired UIs, automation scripts, and small web apps.
