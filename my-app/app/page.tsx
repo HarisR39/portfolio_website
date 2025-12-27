@@ -134,12 +134,6 @@ export default function Home() {
       const progressRaw = (probe - timelineTop) / timelineHeight
       const scrollProgress = Math.min(Math.max(progressRaw, 0), 1)
       const visibleTop = timelineTop - window.scrollY
-      const projectsTop = projectsRef.current?.offsetTop ?? timelineTop + timelineHeight
-      const wallStart = (timelineTop + timelineHeight) - window.innerHeight * 0.35
-      const wallEnd = projectsTop - window.innerHeight * 0.2
-      const wallRaw = (window.scrollY - wallStart) / Math.max(wallEnd - wallStart, 1)
-      const wallProgress = Math.min(Math.max(wallRaw, 0), 1)
-      const wallEased = Math.pow(wallProgress, 0.72)
       const fillPx = Math.min(
         Math.max(window.innerHeight * timelineRefRatio - visibleTop, 0),
         timelineHeight
@@ -178,7 +172,7 @@ export default function Home() {
       pageRef.current?.style.setProperty("--timeline-fill-px", `${fillPx}px`)
       pageRef.current?.style.setProperty("--timeline-fill-max", `${fillMax}px`)
       pageRef.current?.style.setProperty("--timeline-fill-clamped", `${fillClamped}px`)
-      pageRef.current?.style.setProperty("--projects-veil-progress", wallEased.toString())
+
     }
 
     handleScroll()
@@ -253,7 +247,6 @@ export default function Home() {
       </div>
 
       <div className="parallax-veil" aria-hidden="true" />
-      <div className="projects-veil" aria-hidden="true" />
 
       <main className="content">
         <section className="hero" aria-label="Intro" ref={heroRef}>
