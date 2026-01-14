@@ -145,21 +145,38 @@ export default function Home() {
       const veilRaw = (window.scrollY - veilStart) / Math.max(veilEnd - veilStart, 1)
       const veilProgress = Math.min(Math.max(veilRaw, 0), 1)
       const veilEased = Math.pow(veilProgress, 0.7)
-      // Pick the item whose center is closest to the shared reference line for consistent activation with the glow.
-      let closestIdx = activeIndex
-      let closestDelta = Number.POSITIVE_INFINITY
+      // Activate the closest node to the shared reference line, clamped to ends.
       const probeY = window.scrollY + window.innerHeight * timelineRefRatio
-      itemRefs.current.forEach((el, idx) => {
-        if (!el) return
-        const rect = el.getBoundingClientRect()
-        const center = rect.top + window.scrollY + rect.height * 0.5
-        const delta = Math.abs(center - probeY)
-        if (delta < closestDelta) {
-          closestDelta = delta
-          closestIdx = idx
+      const centers = itemRefs.current
+        .map((el) => {
+          if (!el) return null
+          const rect = el.getBoundingClientRect()
+          return rect.top + window.scrollY + rect.height * 0.5
+        })
+        .filter((center): center is number => center !== null)
+      if (centers.length) {
+        const firstCenter = centers[0]
+        const lastCenter = centers[centers.length - 1]
+        let nextIdx = activeIndex
+        if (probeY <= firstCenter) {
+          nextIdx = 0
+        } else if (probeY >= lastCenter) {
+          nextIdx = centers.length - 1
+        } else {
+          let closestDelta = Number.POSITIVE_INFINITY
+          itemRefs.current.forEach((el, idx) => {
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            const center = rect.top + window.scrollY + rect.height * 0.5
+            const delta = Math.abs(center - probeY)
+            if (delta < closestDelta) {
+              closestDelta = delta
+              nextIdx = idx
+            }
+          })
         }
-      })
-      if (closestIdx !== activeIndex) setActiveIndex(closestIdx)
+        if (nextIdx !== activeIndex) setActiveIndex(nextIdx)
+      }
       const lastEl = itemRefs.current[timelineEntries.length - 1]
       const lastCenter = lastEl
         ? (lastEl.getBoundingClientRect().top + window.scrollY + lastEl.getBoundingClientRect().height * 0.5) - timelineTop
@@ -180,7 +197,7 @@ export default function Home() {
     return () => {
       window.removeEventListener("scroll", handleScroll)
     }
-  }, [])
+  }, [activeIndex, timelineEntries.length])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -273,7 +290,6 @@ export default function Home() {
         </section>
 
         <section id="timeline" className="section timeline-section" ref={timelineRef}>
-          <h2 className="section-title">Timeline</h2>
           <div className="timeline-wrapper" aria-label="Milestones">
           <div className="timeline-line" aria-hidden="true" />
             <ul className="timeline-list">
@@ -289,8 +305,6 @@ export default function Home() {
                   <span className="timeline-marker" aria-hidden="true" />
                   <span className="timeline-floating-date">{entry.period}</span>
                   <div className="timeline-content">
-                    <span className="timeline-date">{entry.period}</span>
-                    <h3 className="timeline-title">{entry.title}</h3>
                     <p className="timeline-body">{entry.detail}</p>
                   </div>
                 </li>
