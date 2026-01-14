@@ -275,7 +275,7 @@ export default function Home() {
         <section id="timeline" className="section timeline-section" ref={timelineRef}>
           <h2 className="section-title">Timeline</h2>
           <div className="timeline-wrapper" aria-label="Milestones">
-            <div className="timeline-line" aria-hidden="true" />
+          <div className="timeline-line" aria-hidden="true" />
             <ul className="timeline-list">
               {timelineEntries.map((entry, idx) => (
                 <li
