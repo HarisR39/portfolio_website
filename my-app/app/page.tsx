@@ -67,6 +67,13 @@ const TIMELINE_ICON_PATHS: Record<TimelineIconType, string> = {
 // The flag's pennant is a filled triangle (a stroked one reads as the letter "F" at this size).
 const TIMELINE_FLAG_PENNANT = "M2.5 1.8l7 2.4-7 2.4z"
 
+// Placeholder "currently playing" content — swap in a real track, art, and
+// Spotify/Apple Music link.
+const NOW_PLAYING = {
+  title: "Song Title — Artist Name",
+  href: "#",
+}
+
 function TimelineIcon({ type }: { type: TimelineIconType }) {
   return (
     <svg
@@ -91,8 +98,10 @@ export default function Home() {
   const pageRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLElement | null>(null)
   const timelineRef = useRef<HTMLElement | null>(null)
+  const timelinePinRef = useRef<HTMLDivElement | null>(null)
   const trackRef = useRef<HTMLUListElement | null>(null)
   const itemRefs = useRef<(HTMLLIElement | null)[]>([])
+  const musicWidgetRef = useRef<HTMLDivElement | null>(null)
   const projectsRef = useRef<HTMLElement | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [trackDistance, setTrackDistance] = useState(0)
@@ -240,6 +249,26 @@ export default function Home() {
         el.style.setProperty("--proximity", proximity.toString())
       })
 
+      // Park the "now playing" widget beside the active dot, mirrored into
+      // whichever quadrant the active card's text block ISN'T using.
+      const activeEl = itemRefs.current[nextIdx]
+      const pinEl = timelinePinRef.current
+      const widgetEl = musicWidgetRef.current
+      if (activeEl && pinEl && widgetEl) {
+        const markerEl = activeEl.querySelector(".timeline-marker") as HTMLElement | null
+        const markerRect = (markerEl ?? activeEl).getBoundingClientRect()
+        const pinRect = pinEl.getBoundingClientRect()
+        const relX = markerRect.left + markerRect.width / 2 - pinRect.left
+        const relY = markerRect.top + markerRect.height / 2 - pinRect.top
+        widgetEl.style.left = `${relX}px`
+        widgetEl.style.top = `${relY}px`
+        // Active card's text sits above when its index is even; the widget
+        // takes the opposite (empty) side.
+        const activeIsAbove = nextIdx % 2 === 0
+        widgetEl.classList.toggle("timeline-music--above", !activeIsAbove)
+        widgetEl.classList.toggle("timeline-music--below", activeIsAbove)
+      }
+
       pageRef.current?.style.setProperty("--scroll-progress", eased.toString())
       pageRef.current?.style.setProperty("--veil-progress", veilEased.toString())
       pageRef.current?.style.setProperty("--timeline-progress", timelineProgress.toString())
@@ -330,7 +359,32 @@ export default function Home() {
           ref={timelineRef}
           style={{ height: `calc(100vh + ${trackDistance * TIMELINE_SCROLL_MULTIPLIER}px)` }}
         >
-          <div className="timeline-pin" aria-label="Milestones">
+          <div className="timeline-pin" aria-label="Milestones" ref={timelinePinRef}>
+            <div className="timeline-music" ref={musicWidgetRef}>
+              <a
+                className="timeline-music-card"
+                href={NOW_PLAYING.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Currently playing: ${NOW_PLAYING.title}`}
+              >
+                <span className="timeline-music-art" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5.5 12.5V3.8L13 2.5v8.2" />
+                    <circle cx="3.8" cy="12.5" r="1.7" />
+                    <circle cx="11.3" cy="10.7" r="1.7" />
+                  </svg>
+                </span>
+                <span className="timeline-music-info">
+                  <span className="timeline-music-eq" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="timeline-music-title">{NOW_PLAYING.title}</span>
+                </span>
+              </a>
+            </div>
             <div className="timeline-line" aria-hidden="true">
               <span className="timeline-line-fill" aria-hidden="true" />
             </div>

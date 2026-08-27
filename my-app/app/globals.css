@@ -101,7 +101,7 @@ html {
   background: #000000;
   transform-origin: center bottom;
   transform: translateY(calc(14vh * (1 - var(--veil-progress)))) scaleY(var(--veil-progress));
-  opacity: calc(var(--veil-progress) * 0.85);
+  opacity: calc(var(--veil-progress) * 0.60);
   transition: transform 400ms linear, opacity 400ms linear;
   z-index: 0;
   pointer-events: none;
@@ -528,7 +528,149 @@ canvas {
   outline: none;
 }
 
+.timeline-music {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: left 60ms linear, top 60ms linear;
+}
+
+.timeline-music--above {
+  transform: translate(-50%, calc(-100% - 30px));
+}
+
+.timeline-music--below {
+  transform: translate(-50%, 30px);
+}
+
+.timeline-music-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 999px;
+  text-decoration: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  opacity: 0.75;
+  pointer-events: auto;
+  transition: opacity 350ms ease, transform 350ms ease, box-shadow 350ms ease, border-color 350ms ease;
+}
+
+.timeline-music-card:hover,
+.timeline-music-card:focus-visible {
+  opacity: 1;
+  transform: scale(1.035);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35), 0 0 26px rgba(255, 255, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.timeline-music-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.75);
+  background: linear-gradient(135deg, #2a2438, #14101f);
+  overflow: hidden;
+  filter: grayscale(0.85) saturate(0.7);
+  transition: filter 350ms ease;
+}
+
+.timeline-music-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(167, 142, 255, 0.5), rgba(11, 6, 26, 0.6));
+  mix-blend-mode: color;
+  transition: opacity 350ms ease;
+}
+
+.timeline-music-card:hover .timeline-music-art,
+.timeline-music-card:focus-visible .timeline-music-art {
+  filter: grayscale(0) saturate(1.15);
+}
+
+.timeline-music-card:hover .timeline-music-art::after,
+.timeline-music-card:focus-visible .timeline-music-art::after {
+  opacity: 0;
+}
+
+.timeline-music-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.timeline-music-eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 8px;
+}
+
+.timeline-music-eq i {
+  display: block;
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.55);
+  transform-origin: bottom;
+  animation: timelineMusicEq 1.1s ease-in-out infinite;
+}
+
+.timeline-music-eq i:nth-child(1) {
+  animation-delay: -0.6s;
+}
+
+.timeline-music-eq i:nth-child(2) {
+  animation-delay: -0.2s;
+}
+
+.timeline-music-eq i:nth-child(3) {
+  animation-delay: -0.9s;
+}
+
+@keyframes timelineMusicEq {
+  0%, 100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.timeline-music-title {
+  font-family: 'League Spartan', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 700px) {
+  .timeline-music {
+    display: none;
+  }
+
+
   .timeline-track {
     height: 320px;
     padding: 0 8vw;
