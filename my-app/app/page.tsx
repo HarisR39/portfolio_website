@@ -49,49 +49,106 @@ const DecryptedText = dynamic(() => import('../components/DecryptedText'), {
   loading: () => null,
 }) as unknown as ComponentType<any>
 
+// How much extra vertical scrolling it takes to cross the timeline, relative
+// to the horizontal distance the cards travel. Higher = less sensitive.
+const TIMELINE_SCROLL_MULTIPLIER = 2.2
+
+type TimelineIconType = "code" | "graduation" | "briefcase" | "flag" | "trophy" | "book"
+
+const TIMELINE_ICON_PATHS: Record<TimelineIconType, string> = {
+  code: "M5 3.5L1.5 7l3.5 3.5M9 3.5L12.5 7 9 10.5",
+  graduation: "M1 5l6-3 6 3-6 3-6-3zM4 6.4V9.6c0 1.1 1.4 2 3 2s3-.9 3-2V6.4",
+  briefcase: "M1.5 4.5h11a1 1 0 011 1V11a1 1 0 01-1 1h-11a1 1 0 01-1-1V5.5a1 1 0 011-1zM5 4.5V3a1 1 0 011-1h2a1 1 0 011 1v1.5",
+  flag: "M2.5 1v12",
+  trophy: "M4 2h6v3a3 3 0 01-6 0V2zM4 3H2.2A2 2 0 004 6M10 3h1.8A2 2 0 0110 6M6 8v2M4.5 12h5M6 10h2v2H6z",
+  book: "M1.5 2.8c1-.5 2.5-.6 3.5 0 .4.2.8.5 1 .8.2-.3.6-.6 1-.8 1-.6 2.5-.5 3.5 0v8c-1-.5-2.5-.6-3.5 0-.4.2-.8.5-1 .8-.2-.3-.6-.6-1-.8-1-.6-2.5-.5-3.5 0v-8z",
+}
+
+// The flag's pennant is a filled triangle (a stroked one reads as the letter "F" at this size).
+const TIMELINE_FLAG_PENNANT = "M2.5 1.8l7 2.4-7 2.4z"
+
+function TimelineIcon({ type }: { type: TimelineIconType }) {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 14 14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={TIMELINE_ICON_PATHS[type]} />
+      {type === "flag" && <path d={TIMELINE_FLAG_PENNANT} fill="currentColor" stroke="none" />}
+    </svg>
+  )
+}
+
 export default function Home() {
 
-  // Adjust this to move the reference point for the glowing line and activation (0 = top, 1 = bottom of viewport).
-  const timelineRefRatio = 0.6
   const pageRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLElement | null>(null)
   const timelineRef = useRef<HTMLElement | null>(null)
-  const projectsRef = useRef<HTMLElement | null>(null)
+  const trackRef = useRef<HTMLUListElement | null>(null)
   const itemRefs = useRef<(HTMLLIElement | null)[]>([])
+  const projectsRef = useRef<HTMLElement | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [trackDistance, setTrackDistance] = useState(0)
   const timelineEntries = useMemo(
     () => [
+      {
+        period: "SUMMER 2026",
+        title: "Began Building DropList",
+        detail:
+          "Began building DropList, an AI-powered internship aggregator that monitors company career pages in real time. Built a Playwright-based scraper with SHA-256 change detection, learned XPath for HTML navigation, and started work on an autofill module for job applications using LLM-guided form detection.",
+        icon: "code" as TimelineIconType,
+      },
+      {
+        period: "SPRING 2026",
+        title: "Started Working on StopSafe",
+        detail:
+          "Started working on StopSafe, a mobile app providing real-time driver assistance during police stops. Joined as a backend/infrastructure engineer, building the accident flow, gated capture logic, and evidence manifest system — including PDF generation for incident documentation with GPS data and timestamped capture nodes.",
+        icon: "code" as TimelineIconType,
+      },
       {
         period: "WINTER 2025",
         title: "Started Devloping My First Website",
         detail: "Started Developing My First Website. Began building the personal portfolio you’re viewing now, using it to showcase projects and experiences.",
+        icon: "code" as TimelineIconType,
       },
       {
         period: "FALL 2025",
         title: "Started Studying Comp Sci @ UF",
         detail:
           "Began my Computer Science degree at the University of Florida. My first semester consisted of Advanced Programming, Calculus III, and Discrete Structures, while also participating in my first hackathon. This set the tone for a hands-on, technically focused CS journey.",
+        icon: "graduation" as TimelineIconType,
       },
       {
         period: "SUMMER 2025",
         title: "Graduated from Highschool/Started My Second Job",
         detail:
           "Graduated from high school and started my second job as a Code Ninjas instructor. I competed in district, state, and national programming competitions, earning multiple first-place finishes, while taking 13 AP classes and graduating 11th in my class.",
+        icon: "briefcase" as TimelineIconType,
       },
       {
         period: "FALL 2024",
         title: "Became My FBLA Chapter President",
         detail: "Became President of my FBLA chapter. Led the chapter through competitive events and placed first at the district level.",
+        icon: "flag" as TimelineIconType,
       },
       {
         period: "SUMMER 2023",
         title: "Competed at the National Level",
         detail: "Competed at the National Level. Advanced through district and state competitions to attend the national conference in Atlanta, Georgia, where I met people I still stay in touch with today.",
+        icon: "trophy" as TimelineIconType,
       },
       {
         period: "FALL 2021",
         title: "Started High School",
         detail: "Started High School at River Ride High School. Began exploring academic interests and extracurriculars that shaped my later focus in computer science.",
+        icon: "book" as TimelineIconType,
       },
     ],
     []
@@ -126,18 +183,25 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window === "undefined") return
+    const updateTrackDistance = () => {
+      const track = trackRef.current
+      if (!track) return
+      // getBoundingClientRect (not scrollWidth) because .timeline-track has
+      // overflow: visible, and scrollWidth under-reports on visible-overflow
+      // elements in some browsers, which was cutting the last card short.
+      const trackWidth = track.getBoundingClientRect().width
+      setTrackDistance(Math.max(trackWidth - window.innerWidth, 0))
+    }
+    updateTrackDistance()
+    window.addEventListener("resize", updateTrackDistance)
+    return () => window.removeEventListener("resize", updateTrackDistance)
+  }, [timelineEntries.length])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
     const handleScroll = () => {
       const heroHeight = Math.max(heroRef.current?.offsetHeight ?? 0, window.innerHeight)
       const timelineTop = timelineRef.current?.offsetTop ?? heroHeight
-      const timelineHeight = timelineRef.current?.offsetHeight ?? 1
-      const probe = window.scrollY + window.innerHeight * timelineRefRatio
-      const progressRaw = (probe - timelineTop) / timelineHeight
-      const scrollProgress = Math.min(Math.max(progressRaw, 0), 1)
-      const visibleTop = timelineTop - window.scrollY
-      const fillPx = Math.min(
-        Math.max(window.innerHeight * timelineRefRatio - visibleTop, 0),
-        timelineHeight
-      )
       const progress = Math.min(Math.max(window.scrollY / (heroHeight * 0.6), 0), 1)
       const eased = Math.pow(progress, 0.8)
       const veilStart = heroHeight * 0.55
@@ -145,51 +209,40 @@ export default function Home() {
       const veilRaw = (window.scrollY - veilStart) / Math.max(veilEnd - veilStart, 1)
       const veilProgress = Math.min(Math.max(veilRaw, 0), 1)
       const veilEased = Math.pow(veilProgress, 0.7)
-      // Activate the closest node to the shared reference line, clamped to ends.
-      const probeY = window.scrollY + window.innerHeight * timelineRefRatio
-      const centers = itemRefs.current
-        .map((el) => {
-          if (!el) return null
-          const rect = el.getBoundingClientRect()
-          return rect.top + window.scrollY + rect.height * 0.5
-        })
-        .filter((center): center is number => center !== null)
-      if (centers.length) {
-        const firstCenter = centers[0]
-        const lastCenter = centers[centers.length - 1]
-        let nextIdx = activeIndex
-        if (probeY <= firstCenter) {
-          nextIdx = 0
-        } else if (probeY >= lastCenter) {
-          nextIdx = centers.length - 1
-        } else {
-          let closestDelta = Number.POSITIVE_INFINITY
-          itemRefs.current.forEach((el, idx) => {
-            if (!el) return
-            const rect = el.getBoundingClientRect()
-            const center = rect.top + window.scrollY + rect.height * 0.5
-            const delta = Math.abs(center - probeY)
-            if (delta < closestDelta) {
-              closestDelta = delta
-              nextIdx = idx
-            }
-          })
-        }
-        if (nextIdx !== activeIndex) setActiveIndex(nextIdx)
+
+      // While the timeline is pinned, page scroll drives horizontal motion of the track.
+      const scrollRunway = trackDistance * TIMELINE_SCROLL_MULTIPLIER
+      const timelineRaw = (window.scrollY - timelineTop) / Math.max(scrollRunway, 1)
+      const timelineProgress = Math.min(Math.max(timelineRaw, 0), 1)
+      const offsetPx = timelineProgress * trackDistance
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translateY(-50%) translateX(-${offsetPx}px)`
       }
-      const lastEl = itemRefs.current[timelineEntries.length - 1]
-      const lastCenter = lastEl
-        ? (lastEl.getBoundingClientRect().top + window.scrollY + lastEl.getBoundingClientRect().height * 0.5) - timelineTop
-        : timelineHeight
-      const fillMax = Math.min(Math.max(lastCenter, 0), timelineHeight)
-      const fillClamped = Math.min(fillPx, fillMax)
+
+      // Which card is "active" comes from progress alone (guarantees every card,
+      // including the first and last, gets its turn). Position-based proximity
+      // to viewport center is used only for the cosmetic fade/scale below,
+      // since the track's translation range doesn't sweep the end cards all
+      // the way to center.
+      const nextIdx = Math.min(
+        Math.max(Math.round(timelineProgress * (timelineEntries.length - 1)), 0),
+        timelineEntries.length - 1
+      )
+      if (nextIdx !== activeIndex) setActiveIndex(nextIdx)
+
+      const referenceX = window.innerWidth / 2
+      const proximitySpan = Math.max(window.innerWidth * 0.32, 1)
+      itemRefs.current.forEach((el) => {
+        if (!el) return
+        const rect = el.getBoundingClientRect()
+        const centerX = rect.left + rect.width / 2
+        const proximity = Math.min(Math.max(1 - Math.abs(centerX - referenceX) / proximitySpan, 0), 1)
+        el.style.setProperty("--proximity", proximity.toString())
+      })
+
       pageRef.current?.style.setProperty("--scroll-progress", eased.toString())
       pageRef.current?.style.setProperty("--veil-progress", veilEased.toString())
-      pageRef.current?.style.setProperty("--timeline-progress", scrollProgress.toString())
-      pageRef.current?.style.setProperty("--timeline-fill-px", `${fillPx}px`)
-      pageRef.current?.style.setProperty("--timeline-fill-max", `${fillMax}px`)
-      pageRef.current?.style.setProperty("--timeline-fill-clamped", `${fillClamped}px`)
-
+      pageRef.current?.style.setProperty("--timeline-progress", timelineProgress.toString())
     }
 
     handleScroll()
@@ -197,25 +250,7 @@ export default function Home() {
     return () => {
       window.removeEventListener("scroll", handleScroll)
     }
-  }, [activeIndex, timelineEntries.length])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const idx = Number((entry.target as HTMLElement).dataset.index)
-            if (!Number.isNaN(idx)) setActiveIndex(idx)
-          }
-        })
-      },
-      { rootMargin: "-35% 0px -35% 0px", threshold: 0.25 }
-    )
-
-    itemRefs.current.forEach((el) => el && observer.observe(el))
-    return () => observer.disconnect()
-  }, [timelineEntries.length])
+  }, [activeIndex, timelineEntries.length, trackDistance])
 
   return (
     <div className="page" id="top" ref={pageRef}>
@@ -289,26 +324,44 @@ export default function Home() {
           )}
         </section>
 
-        <section id="timeline" className="section timeline-section" ref={timelineRef}>
-          <div className="timeline-wrapper" aria-label="Milestones">
-          <div className="timeline-line" aria-hidden="true" />
-            <ul className="timeline-list">
-              {timelineEntries.map((entry, idx) => (
-                <li
-                  className={`timeline-item ${activeIndex === idx ? "is-active" : ""}`}
-                  key={entry.period}
-                  data-index={idx}
-                  ref={(el) => {
-                    itemRefs.current[idx] = el
-                  }}
-                >
-                  <span className="timeline-marker" aria-hidden="true" />
-                  <span className="timeline-floating-date">{entry.period}</span>
-                  <div className="timeline-content">
-                    <p className="timeline-body">{entry.detail}</p>
-                  </div>
-                </li>
-              ))}
+        <section
+          id="timeline"
+          className="section timeline-section"
+          ref={timelineRef}
+          style={{ height: `calc(100vh + ${trackDistance * TIMELINE_SCROLL_MULTIPLIER}px)` }}
+        >
+          <div className="timeline-pin" aria-label="Milestones">
+            <div className="timeline-line" aria-hidden="true">
+              <span className="timeline-line-fill" aria-hidden="true" />
+            </div>
+            <ul className="timeline-track" ref={trackRef}>
+              {timelineEntries.map((entry, idx) => {
+                const isAbove = idx % 2 === 0
+                return (
+                  <li
+                    className={`timeline-item ${activeIndex === idx ? "is-active" : ""} ${
+                      isAbove ? "timeline-item--above" : "timeline-item--below"
+                    }`}
+                    key={entry.period}
+                    tabIndex={0}
+                    ref={(el) => {
+                      itemRefs.current[idx] = el
+                    }}
+                  >
+                    <span className="timeline-connector" aria-hidden="true" />
+                    <span className="timeline-marker" aria-hidden="true">
+                      <TimelineIcon type={entry.icon} />
+                    </span>
+                    <div className="timeline-block">
+                      <span className="timeline-eyebrow">{`MILESTONE ${String(timelineEntries.length - idx).padStart(2, "0")}`}</span>
+                      <span className="timeline-floating-date">{entry.period}</span>
+                      <div className="timeline-content">
+                        <p className="timeline-body">{entry.detail}</p>
+                      </div>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           </div>
         </section>
