@@ -91,6 +91,58 @@ function TimelineIcon({ type }: { type: TimelineIconType }) {
   )
 }
 
+type ProjectStatus = "active" | "archived"
+
+type Project = {
+  name: string
+  status: ProjectStatus
+  description: string
+  stack: string
+  lastUpdated: string
+  href: string
+}
+
+// Placeholder project data — swap in real GitHub repo URLs (and update status/
+// last-updated as projects wrap up) once available.
+const PROJECTS: Project[] = [
+  {
+    name: "droplist",
+    status: "active",
+    description:
+      "AI-powered internship aggregator that monitors company career pages in real time, detects changes, and surfaces new postings the moment they go live.",
+    stack: "Python, Playwright, XPath, LLM APIs",
+    lastUpdated: "Aug 2026",
+    href: "https://github.com/HarisR39/DropList",
+  },
+  {
+    name: "stopsafe",
+    status: "active",
+    description:
+      "Mobile app providing real-time driver assistance during police stops, with gated capture logic and a PDF-backed evidence manifest.",
+    stack: "React Native, Node.js, PostgreSQL",
+    lastUpdated: "Aug 2026",
+    href: "https://github.com/HarisR39",
+  },
+  {
+    name: "portfolio-website",
+    status: "active",
+    description:
+      "This site — a personal portfolio with a scroll-driven horizontal timeline, a WebGL terminal background, and a Spotify-linked now-playing widget.",
+    stack: "Next.js, TypeScript, OGL (WebGL)",
+    lastUpdated: "Aug 2026",
+    href: "https://github.com/HarisR39/portfolio_website",
+  },
+  {
+    name: "trackify",
+    status: "archived",
+    description:
+      "A student involvement tracking system built for schools — lets educators monitor and manage student participation in extracurricular activities, clubs, and events, with attendance tracking, performance analytics, and teacher confirmation codes for verifying records.",
+    stack: "Python, Tkinter, MongoDB",
+    lastUpdated: "Jun 2023",
+    href: "https://github.com/aidanq06/Trackify",
+  },
+]
+
 export default function Home() {
 
   const pageRef = useRef<HTMLDivElement | null>(null)
@@ -531,10 +583,35 @@ export default function Home() {
 
         <section id="projects" className="section projects-section" ref={projectsRef}>
           <h2 className="section-title">Projects</h2>
-          <p className="section-text">
-            A mix of personal builds and class work: terminal-inspired UIs, automation scripts, and small web apps.
-            Always looking for ways to blend clean design with solid engineering practices.
-          </p>
+          <div className="projects-grid">
+            {PROJECTS.map((project) => (
+              <a
+                key={project.name}
+                className={`project-card ${project.status === "archived" ? "project-card--archived" : ""}`}
+                href={project.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <div className="project-card-header">
+                  <span
+                    className={`project-status-dot project-status-dot--${project.status}`}
+                    aria-hidden="true"
+                  />
+                  <span className="project-status-label">{project.status}</span>
+                </div>
+                <p className="project-path">
+                  {`C:\\projects\\${project.name}`}
+                  {project.status === "active" && <span className="project-cursor" aria-hidden="true">_</span>}
+                </p>
+                <p className="project-description">{project.description}</p>
+                <p className="project-stack">{`> stack: ${project.stack}`}</p>
+                <p className="project-updated">
+                  <span>{`> last updated: ${project.lastUpdated}`}</span>
+                  <span className="project-view-hint">[view →]</span>
+                </p>
+              </a>
+            ))}
+          </div>
         </section>
 
         <section id="personal" className="section personal-section">

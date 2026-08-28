@@ -101,7 +101,7 @@ html {
   background: #000000;
   transform-origin: center bottom;
   transform: translateY(calc(14vh * (1 - var(--veil-progress)))) scaleY(var(--veil-progress));
-  opacity: calc(var(--veil-progress) * 0.60);
+  opacity: calc(var(--veil-progress) * 0.70);
   transition: transform 400ms linear, opacity 400ms linear;
   z-index: 0;
   pointer-events: none;
@@ -302,6 +302,150 @@ canvas {
   font-size: clamp(1rem, 2.4vw, 1.2rem);
   line-height: 1.6;
   color: #d7f9e4;
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 28px;
+  margin-top: 36px;
+}
+
+.project-card {
+  display: block;
+  position: relative;
+  padding: 28px 30px 26px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.project-card:hover,
+.project-card:focus-visible {
+  transform: scale(1.03);
+  border-color: rgba(167, 239, 158, 0.55);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), 0 0 26px rgba(167, 239, 158, 0.16);
+  outline: none;
+}
+
+.project-card--archived {
+  opacity: 0.75;
+}
+
+.project-card-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 18px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 0.95rem;
+}
+
+.project-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.project-status-dot--active {
+  background: #3ddc73;
+  box-shadow: 0 0 6px rgba(61, 220, 115, 0.85);
+}
+
+.project-status-dot--archived {
+  background: #8a8a8a;
+}
+
+.project-status-label {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.project-card--archived .project-status-label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.project-path {
+  margin: 0 0 16px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f4fff8;
+  word-break: break-all;
+}
+
+.project-card--archived .project-path {
+  color: rgba(244, 255, 248, 0.7);
+}
+
+.project-cursor {
+  color: #a7ef9e;
+  animation: projectCursorBlink 1s steps(1, start) infinite;
+}
+
+@keyframes projectCursorBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.project-description {
+  margin: 0 0 18px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(196, 224, 206, 0.85);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.project-card--archived .project-description {
+  color: rgba(196, 224, 206, 0.55);
+}
+
+.project-stack {
+  margin: 0 0 8px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 0.95rem;
+  color: rgb(167, 239, 158);
+}
+
+.project-card--archived .project-stack {
+  color: rgba(140, 180, 150, 0.7);
+}
+
+.project-updated {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.project-card--archived .project-updated {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.project-view-hint {
+  color: #a7ef9e;
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 300ms ease;
+}
+
+.project-card:hover .project-view-hint,
+.project-card:focus-visible .project-view-hint {
+  opacity: 1;
 }
 
 .timeline-intro {
