@@ -53,6 +53,10 @@ const DecryptedText = dynamic(() => import('../components/DecryptedText'), {
 // to the horizontal distance the cards travel. Higher = less sensitive.
 const TIMELINE_SCROLL_MULTIPLIER = 2.2
 
+// Timing for the one-shot "This timeline marks..." intro text.
+const TIMELINE_INTRO_FADE_MS = 450
+const TIMELINE_INTRO_HOLD_MS = 1800
+
 type TimelineIconType = "code" | "graduation" | "briefcase" | "flag" | "trophy" | "book"
 
 const TIMELINE_ICON_PATHS: Record<TimelineIconType, string> = {
@@ -66,13 +70,6 @@ const TIMELINE_ICON_PATHS: Record<TimelineIconType, string> = {
 
 // The flag's pennant is a filled triangle (a stroked one reads as the letter "F" at this size).
 const TIMELINE_FLAG_PENNANT = "M2.5 1.8l7 2.4-7 2.4z"
-
-// Placeholder "currently playing" content — swap in a real track, art, and
-// Spotify/Apple Music link.
-const NOW_PLAYING = {
-  title: "Song Title — Artist Name",
-  href: "#",
-}
 
 function TimelineIcon({ type }: { type: TimelineIconType }) {
   return (
@@ -105,6 +102,10 @@ export default function Home() {
   const projectsRef = useRef<HTMLElement | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [trackDistance, setTrackDistance] = useState(0)
+  const [songArtByHref, setSongArtByHref] = useState<Record<string, string>>({})
+  const [showTimelineIntro, setShowTimelineIntro] = useState(false)
+  const timelineIntroTriggeredRef = useRef(false)
+  const timelineIntroScrollLockRef = useRef(false)
   const timelineEntries = useMemo(
     () => [
       {
@@ -113,6 +114,7 @@ export default function Home() {
         detail:
           "Began building DropList, an AI-powered internship aggregator that monitors company career pages in real time. Built a Playwright-based scraper with SHA-256 change detection, learned XPath for HTML navigation, and started work on an autofill module for job applications using LLM-guided form detection.",
         icon: "code" as TimelineIconType,
+        song: { title: "Rolling Stone", artist: "The Weeknd", href: "https://open.spotify.com/track/29fTi7Tdh9CiU8HuVDaqVY?si=67fdd0931c444098" },
       },
       {
         period: "SPRING 2026",
@@ -120,12 +122,14 @@ export default function Home() {
         detail:
           "Started working on StopSafe, a mobile app providing real-time driver assistance during police stops. Joined as a backend/infrastructure engineer, building the accident flow, gated capture logic, and evidence manifest system — including PDF generation for incident documentation with GPS data and timestamped capture nodes.",
         icon: "code" as TimelineIconType,
+        song: { title: "Woman", artist: "Doja Cat", href: "https://open.spotify.com/track/6Uj1ctrBOjOas8xZXGqKk4?si=58fac68c13d140d4" },
       },
       {
         period: "WINTER 2025",
         title: "Started Devloping My First Website",
         detail: "Started Developing My First Website. Began building the personal portfolio you’re viewing now, using it to showcase projects and experiences.",
         icon: "code" as TimelineIconType,
+        song: { title: "Les", artist: "Childish Gambino", href: "https://open.spotify.com/track/7ghKr0pCYyPPyp7t1FH8k4?si=379207d563284f05" },
       },
       {
         period: "FALL 2025",
@@ -133,6 +137,7 @@ export default function Home() {
         detail:
           "Began my Computer Science degree at the University of Florida. My first semester consisted of Advanced Programming, Calculus III, and Discrete Structures, while also participating in my first hackathon. This set the tone for a hands-on, technically focused CS journey.",
         icon: "graduation" as TimelineIconType,
+        song: { title: "Die For You", artist: "The Weeknd", href: "https://open.spotify.com/track/2Ch7LmS7r2Gy2kc64wv3Bz?si=25cc957b09a14545" },
       },
       {
         period: "SUMMER 2025",
@@ -140,24 +145,28 @@ export default function Home() {
         detail:
           "Graduated from high school and started my second job as a Code Ninjas instructor. I competed in district, state, and national programming competitions, earning multiple first-place finishes, while taking 13 AP classes and graduating 11th in my class.",
         icon: "briefcase" as TimelineIconType,
+        song: { title: "Pretend Lovers", artist: "Montell Fish", href: "https://open.spotify.com/track/7GddnyejWAEvLkzwgAPxi6?si=51382ff3bc06449c" },
       },
       {
         period: "FALL 2024",
         title: "Became My FBLA Chapter President",
         detail: "Became President of my FBLA chapter. Led the chapter through competitive events and placed first at the district level.",
         icon: "flag" as TimelineIconType,
+        song: { title: "Poison", artist: "Brent Faiyaz", href: "https://open.spotify.com/track/5NijSs5dAwaIybq1GaRTIe?si=292a51f5ebe441d0" },
       },
       {
         period: "SUMMER 2023",
         title: "Competed at the National Level",
         detail: "Competed at the National Level. Advanced through district and state competitions to attend the national conference in Atlanta, Georgia, where I met people I still stay in touch with today.",
         icon: "trophy" as TimelineIconType,
+        song: { title: "Can't Feel My Face", artist: "The Weeknd", href: "https://open.spotify.com/track/22VdIZQfgXJea34mQxlt81?si=5477b558dbb0441d" },
       },
       {
         period: "FALL 2021",
         title: "Started High School",
         detail: "Started High School at River Ride High School. Began exploring academic interests and extracurriculars that shaped my later focus in computer science.",
         icon: "book" as TimelineIconType,
+        song: { title: "Stay With Me", artist: "1nonly", href: "https://open.spotify.com/track/4rSfauDT5mDZEkgKScAdDy?si=e737953ebea44cb3" },
       },
     ],
     []
@@ -192,6 +201,57 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window === "undefined") return
+    // While the timeline intro text is on screen, swallow the scroll-driving
+    // inputs so a hard scroll can't blow straight past it.
+    const blockIfLocked = (e: Event) => {
+      if (timelineIntroScrollLockRef.current) e.preventDefault()
+    }
+    const blockKeyIfLocked = (e: KeyboardEvent) => {
+      if (!timelineIntroScrollLockRef.current) return
+      if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"].includes(e.key)) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener("wheel", blockIfLocked, { passive: false })
+    window.addEventListener("touchmove", blockIfLocked, { passive: false })
+    window.addEventListener("keydown", blockKeyIfLocked)
+    return () => {
+      window.removeEventListener("wheel", blockIfLocked)
+      window.removeEventListener("touchmove", blockIfLocked)
+      window.removeEventListener("keydown", blockKeyIfLocked)
+    }
+  }, [])
+
+  useEffect(() => {
+    const spotifyHrefs = Array.from(
+      new Set(
+        timelineEntries
+          .map((entry) => entry.song.href)
+          .filter((href) => href.includes("open.spotify.com/track/"))
+      )
+    )
+    if (!spotifyHrefs.length) return
+
+    let cancelled = false
+    spotifyHrefs.forEach(async (href) => {
+      try {
+        const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(href)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled && data.thumbnail_url) {
+          setSongArtByHref((prev) => ({ ...prev, [href]: data.thumbnail_url }))
+        }
+      } catch {
+        // Art stays as the placeholder icon if the fetch fails.
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [timelineEntries])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
     const updateTrackDistance = () => {
       const track = trackRef.current
       if (!track) return
@@ -218,6 +278,19 @@ export default function Home() {
       const veilRaw = (window.scrollY - veilStart) / Math.max(veilEnd - veilStart, 1)
       const veilProgress = Math.min(Math.max(veilRaw, 0), 1)
       const veilEased = Math.pow(veilProgress, 0.7)
+
+      // Show the timeline intro once the veil has fully darkened (not before -
+      // it should read as appearing after the tint, not alongside it), then
+      // hold scroll for the reading window so a hard scroll can't skip it.
+      if (!timelineIntroTriggeredRef.current && veilProgress >= 1) {
+        timelineIntroTriggeredRef.current = true
+        timelineIntroScrollLockRef.current = true
+        setShowTimelineIntro(true)
+        setTimeout(() => {
+          setShowTimelineIntro(false)
+          timelineIntroScrollLockRef.current = false
+        }, TIMELINE_INTRO_FADE_MS + TIMELINE_INTRO_HOLD_MS)
+      }
 
       // While the timeline is pinned, page scroll drives horizontal motion of the track.
       const scrollRunway = trackDistance * TIMELINE_SCROLL_MULTIPLIER
@@ -249,8 +322,11 @@ export default function Home() {
         el.style.setProperty("--proximity", proximity.toString())
       })
 
-      // Park the "now playing" widget beside the active dot, mirrored into
-      // whichever quadrant the active card's text block ISN'T using.
+      // Park the "now playing" widget to the right of the active dot, nudged
+      // slightly off the line - above it when that card's text sits below,
+      // below it when the text sits above - so it never sits flush against
+      // the line itself. Clamped so it can't run past the visible edge for
+      // cards whose dot already sits near the right side of the viewport.
       const activeEl = itemRefs.current[nextIdx]
       const pinEl = timelinePinRef.current
       const widgetEl = musicWidgetRef.current
@@ -260,13 +336,14 @@ export default function Home() {
         const pinRect = pinEl.getBoundingClientRect()
         const relX = markerRect.left + markerRect.width / 2 - pinRect.left
         const relY = markerRect.top + markerRect.height / 2 - pinRect.top
-        widgetEl.style.left = `${relX}px`
-        widgetEl.style.top = `${relY}px`
-        // Active card's text sits above when its index is even; the widget
-        // takes the opposite (empty) side.
-        const activeIsAbove = nextIdx % 2 === 0
-        widgetEl.classList.toggle("timeline-music--above", !activeIsAbove)
-        widgetEl.classList.toggle("timeline-music--below", activeIsAbove)
+        const widgetOffset = 200
+        const widgetMaxWidth = 220
+        const edgeMargin = 16
+        const maxRelX = pinRect.width - widgetOffset - widgetMaxWidth - edgeMargin
+        const verticalNudge = 24
+        const activeTextIsAbove = nextIdx % 2 === 0
+        widgetEl.style.left = `${Math.min(relX, maxRelX)}px`
+        widgetEl.style.top = `${relY + (activeTextIsAbove ? verticalNudge : -verticalNudge)}px`
       }
 
       pageRef.current?.style.setProperty("--scroll-progress", eased.toString())
@@ -329,6 +406,14 @@ export default function Home() {
 
       <div className="parallax-veil" aria-hidden="true" />
 
+      <div
+        className={`timeline-intro ${showTimelineIntro ? "is-visible" : ""}`}
+        aria-hidden={!showTimelineIntro}
+      >
+        <p>This timeline marks key milestones in my academic and professional journey.</p>
+        <p>Each song was what I was listening to most during that chapter.</p>
+      </div>
+
       <main className="content">
         <section className="hero" aria-label="Intro" ref={heroRef}>
           <div className="name">
@@ -360,28 +445,40 @@ export default function Home() {
           style={{ height: `calc(100vh + ${trackDistance * TIMELINE_SCROLL_MULTIPLIER}px)` }}
         >
           <div className="timeline-pin" aria-label="Milestones" ref={timelinePinRef}>
-            <div className="timeline-music" ref={musicWidgetRef}>
+            <div className="timeline-music timeline-music--right" ref={musicWidgetRef}>
               <a
                 className="timeline-music-card"
-                href={NOW_PLAYING.href}
+                href={timelineEntries[activeIndex].song.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`Currently playing: ${NOW_PLAYING.title}`}
+                aria-label={`Currently playing: ${timelineEntries[activeIndex].song.title}`}
               >
                 <span className="timeline-music-art" aria-hidden="true">
-                  <svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5.5 12.5V3.8L13 2.5v8.2" />
-                    <circle cx="3.8" cy="12.5" r="1.7" />
-                    <circle cx="11.3" cy="10.7" r="1.7" />
-                  </svg>
+                  {songArtByHref[timelineEntries[activeIndex].song.href] ? (
+                    <img
+                      src={songArtByHref[timelineEntries[activeIndex].song.href]}
+                      alt=""
+                      width={96}
+                      height={96}
+                    />
+                  ) : (
+                    <svg width="30" height="30" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5.5 12.5V3.8L13 2.5v8.2" />
+                      <circle cx="3.8" cy="12.5" r="1.7" />
+                      <circle cx="11.3" cy="10.7" r="1.7" />
+                    </svg>
+                  )}
                 </span>
                 <span className="timeline-music-info">
-                  <span className="timeline-music-eq" aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
+                  <span className="timeline-music-title-row">
+                    <span className="timeline-music-eq" aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    <span className="timeline-music-title">{timelineEntries[activeIndex].song.title}</span>
                   </span>
-                  <span className="timeline-music-title">{NOW_PLAYING.title}</span>
+                  <span className="timeline-music-artist">{timelineEntries[activeIndex].song.artist}</span>
                 </span>
               </a>
             </div>
