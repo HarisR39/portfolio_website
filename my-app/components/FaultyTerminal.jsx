@@ -250,6 +250,16 @@ export default function FaultyTerminal({
   const rafRef = useRef(0);
   const loadAnimationStartRef = useRef(0);
   const timeOffsetRef = useRef(Math.random() * 100);
+  // Read inside the rAF loop instead of closing over `pause` directly, so
+  // toggling it doesn't need to be a dependency of the setup effect below -
+  // that effect tears down and rebuilds the whole WebGL context/program/mesh
+  // on every dependency change, which pausing (e.g. when scrolled out of
+  // view) would otherwise trigger on every toggle for no visual reason.
+  const pauseRef = useRef(pause);
+
+  useEffect(() => {
+    pauseRef.current = pause;
+  }, [pause]);
 
   const tintVec = useMemo(() => hexToRgb(tint), [tint]);
 
@@ -326,17 +336,18 @@ export default function FaultyTerminal({
     const update = t => {
       rafRef.current = requestAnimationFrame(update);
 
+      // Skip the uniform math and the draw call entirely while paused - the
+      // previous behavior still rendered an identical frame every tick at
+      // full shader cost, which defeated the point of pausing when hidden.
+      if (pauseRef.current) return;
+
       if (pageLoadAnimation && loadAnimationStartRef.current === 0) {
         loadAnimationStartRef.current = t;
       }
 
-      if (!pause) {
-        const elapsed = (t * 0.001 + timeOffsetRef.current) * timeScale;
-        program.uniforms.iTime.value = elapsed;
-        frozenTimeRef.current = elapsed;
-      } else {
-        program.uniforms.iTime.value = frozenTimeRef.current;
-      }
+      const elapsed = (t * 0.001 + timeOffsetRef.current) * timeScale;
+      program.uniforms.iTime.value = elapsed;
+      frozenTimeRef.current = elapsed;
 
       if (pageLoadAnimation && loadAnimationStartRef.current > 0) {
         const animationDuration = 2000;
@@ -375,7 +386,6 @@ export default function FaultyTerminal({
     };
   }, [
     dpr,
-    pause,
     timeScale,
     scale,
     gridMul,

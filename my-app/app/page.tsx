@@ -2,8 +2,9 @@
 // app/page.tsx
 import dynamic from 'next/dynamic'
 import type { ComponentType } from 'react'
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import PillNavRaw from "../components/PillNav"
+import ScrollReveal, { type RevealItem } from "../components/ScrollReveal"
 
 type PillNavItem = { href: string; label: string; ariaLabel?: string }
 
@@ -143,6 +144,60 @@ const PROJECTS: Project[] = [
   },
 ]
 
+const VolleyballIcon = (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3">
+    <circle cx="50" cy="50" r="42" />
+    <path d="M50 8C35 22 35 78 50 92" />
+    <path d="M50 8C65 22 65 78 50 92" />
+    <path d="M11 38C30 48 70 48 89 38" />
+    <path d="M14 68C34 56 66 56 86 68" />
+  </svg>
+)
+
+const SoccerIcon = (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3">
+    <circle cx="50" cy="50" r="42" />
+    <path d="M50 30L64 40L58 58H42L36 40Z" strokeLinejoin="round" />
+    <path d="M50 30V14M64 40L78 30M58 58L64 76M42 58L36 76M36 40L22 30" strokeLinecap="round" />
+  </svg>
+)
+
+const TennisIcon = (
+  <svg viewBox="0 0 100 100" fill="none" stroke="currentColor">
+    <ellipse cx="42" cy="38" rx="26" ry="32" strokeWidth="3" />
+    <path d="M42 6V70M20 20 22 56M64 20 62 56M18 30h48M18 46h48" strokeWidth="1.4" />
+    <path d="M42 70L52 92" strokeWidth="4" strokeLinecap="round" />
+    <path d="M48 88h10" strokeWidth="4" strokeLinecap="round" />
+  </svg>
+)
+
+const PERSONAL_REVEAL_ITEMS: RevealItem[] = [
+  {
+    label: "Volleyball",
+    eyebrow: "01 — Indoor & Sand",
+    blurb: "Reading the set before it's even hit. Fast hands, faster footwork, and a lot of yelling \"mine.\"",
+    color: "#2F7FD1",
+    colorDark: "#1E5A9A",
+    icon: VolleyballIcon,
+  },
+  {
+    label: "Soccer",
+    eyebrow: "02 — Back of the Net",
+    blurb: "Ninety minutes of small decisions. I'd rather make the pass that makes the assist possible.",
+    color: "#1F8A4C",
+    colorDark: "#146336",
+    icon: SoccerIcon,
+  },
+  {
+    label: "Tennis",
+    eyebrow: "03 — Baseline to Net",
+    blurb: "A one-on-one problem to solve every point. No teammates to hide behind, no excuses either.",
+    color: "#C7D93E",
+    colorDark: "#8F9F1E",
+    icon: TennisIcon,
+  },
+]
+
 export default function Home() {
 
   const pageRef = useRef<HTMLDivElement | null>(null)
@@ -157,8 +212,11 @@ export default function Home() {
   const [trackDistance, setTrackDistance] = useState(0)
   const [songArtByHref, setSongArtByHref] = useState<Record<string, string>>({})
   const [showTimelineIntro, setShowTimelineIntro] = useState(false)
+  const [terminalPaused, setTerminalPaused] = useState(false)
+  const handleRevealOpaqueChange = useCallback((opaque: boolean) => {
+    setTerminalPaused(opaque)
+  }, [])
   const timelineIntroTriggeredRef = useRef(false)
-  const timelineIntroScrollLockRef = useRef(false)
   const timelineEntries = useMemo(
     () => [
       {
@@ -253,29 +311,6 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-    // While the timeline intro text is on screen, swallow the scroll-driving
-    // inputs so a hard scroll can't blow straight past it.
-    const blockIfLocked = (e: Event) => {
-      if (timelineIntroScrollLockRef.current) e.preventDefault()
-    }
-    const blockKeyIfLocked = (e: KeyboardEvent) => {
-      if (!timelineIntroScrollLockRef.current) return
-      if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"].includes(e.key)) {
-        e.preventDefault()
-      }
-    }
-    window.addEventListener("wheel", blockIfLocked, { passive: false })
-    window.addEventListener("touchmove", blockIfLocked, { passive: false })
-    window.addEventListener("keydown", blockKeyIfLocked)
-    return () => {
-      window.removeEventListener("wheel", blockIfLocked)
-      window.removeEventListener("touchmove", blockIfLocked)
-      window.removeEventListener("keydown", blockKeyIfLocked)
-    }
-  }, [])
-
-  useEffect(() => {
     const spotifyHrefs = Array.from(
       new Set(
         timelineEntries
@@ -321,7 +356,30 @@ export default function Home() {
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    const handleScroll = () => {
+
+    // Swallows scroll-driving input for the brief lock window only - attached
+    // on demand below rather than for the page's whole lifetime, since a
+    // non-passive wheel/touchmove listener forces the browser to wait on the
+    // main thread before it can commit any scroll, which otherwise adds scroll
+    // latency site-wide for the sake of a ~1s window near the top of the page.
+    const blockScroll = (e: Event) => e.preventDefault()
+    const blockScrollKey = (e: KeyboardEvent) => {
+      if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"].includes(e.key)) {
+        e.preventDefault()
+      }
+    }
+    const attachScrollLock = () => {
+      window.addEventListener("wheel", blockScroll, { passive: false })
+      window.addEventListener("touchmove", blockScroll, { passive: false })
+      window.addEventListener("keydown", blockScrollKey)
+    }
+    const releaseScrollLock = () => {
+      window.removeEventListener("wheel", blockScroll)
+      window.removeEventListener("touchmove", blockScroll)
+      window.removeEventListener("keydown", blockScrollKey)
+    }
+
+    const update = () => {
       const heroHeight = Math.max(heroRef.current?.offsetHeight ?? 0, window.innerHeight)
       const timelineTop = timelineRef.current?.offsetTop ?? heroHeight
       const progress = Math.min(Math.max(window.scrollY / (heroHeight * 0.6), 0), 1)
@@ -339,10 +397,10 @@ export default function Home() {
       // scrolling resumes.
       if (!timelineIntroTriggeredRef.current && veilProgress >= 1) {
         timelineIntroTriggeredRef.current = true
-        timelineIntroScrollLockRef.current = true
         setShowTimelineIntro(true)
+        attachScrollLock()
         setTimeout(() => {
-          timelineIntroScrollLockRef.current = false
+          releaseScrollLock()
         }, TIMELINE_INTRO_FADE_MS + TIMELINE_INTRO_SCROLL_LOCK_MS)
         setTimeout(() => {
           setShowTimelineIntro(false)
@@ -415,10 +473,26 @@ export default function Home() {
       pageRef.current?.style.setProperty("--veil-progress", veilEased.toString())
     }
 
-    handleScroll()
+    // Native 'scroll' events can fire far more often than the display can
+    // paint (especially with high-precision trackpads), so this was running
+    // its full body - including several getBoundingClientRect() reads right
+    // after a style write, forcing a synchronous layout - many times per
+    // frame. Throttling to one update per animation frame fixes both.
+    let ticking = false
+    const handleScroll = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        update()
+        ticking = false
+      })
+    }
+
+    update()
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => {
       window.removeEventListener("scroll", handleScroll)
+      releaseScrollLock()
     }
   }, [activeIndex, timelineEntries.length, trackDistance])
 
@@ -450,7 +524,7 @@ export default function Home() {
             gridMul={gridMul}
             digitSize={1.5}
             timeScale={0.5}
-            pause={false}
+            pause={terminalPaused}
             scanlineIntensity={0.5}
             glitchAmount={0.5}
             flickerAmount={1}
@@ -614,12 +688,15 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="personal" className="section personal-section">
-          <h2 className="section-title">Personal</h2>
-          <p className="section-text">
-            When I am not coding, you will find me listening to The Weeknd, tweaking workflows, or testing new tech stacks.
-            I like learning by shipping and experimenting with ideas that feel a bit out of the ordinary.
-          </p>
+        <section id="personal" className="personal-section">
+          <div className="section personal-intro">
+            <h2 className="section-title">Personal</h2>
+            <p className="section-text">
+              When I am not coding, you will find me listening to The Weeknd, tweaking workflows, or testing new tech stacks.
+              I like learning by shipping and experimenting with ideas that feel a bit out of the ordinary.
+            </p>
+          </div>
+          <ScrollReveal items={PERSONAL_REVEAL_ITEMS} onOpaqueChange={handleRevealOpaqueChange} />
         </section>
 
         <section id="contact" className="section contact-section">
