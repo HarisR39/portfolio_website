@@ -55,7 +55,8 @@ const TIMELINE_SCROLL_MULTIPLIER = 2.2
 
 // Timing for the one-shot "This timeline marks..." intro text.
 const TIMELINE_INTRO_FADE_MS = 450
-const TIMELINE_INTRO_HOLD_MS = 1800
+const TIMELINE_INTRO_SCROLL_LOCK_MS = 500
+const TIMELINE_INTRO_TEXT_HOLD_MS = 3500
 
 type TimelineIconType = "code" | "graduation" | "briefcase" | "flag" | "trophy" | "book"
 
@@ -166,7 +167,7 @@ export default function Home() {
         title: "Started High School",
         detail: "Started High School at River Ride High School. Began exploring academic interests and extracurriculars that shaped my later focus in computer science.",
         icon: "book" as TimelineIconType,
-        song: { title: "Stay With Me", artist: "1nonly", href: "https://open.spotify.com/track/4rSfauDT5mDZEkgKScAdDy?si=e737953ebea44cb3" },
+        song: { title: "Cherrry Blossoms", artist: "Shady Moon", href: "https://open.spotify.com/track/0i55G9XxEPCxYwzozhQun5?si=7e46c458c2824321" },
       },
     ],
     []
@@ -280,16 +281,20 @@ export default function Home() {
       const veilEased = Math.pow(veilProgress, 0.7)
 
       // Show the timeline intro once the veil has fully darkened (not before -
-      // it should read as appearing after the tint, not alongside it), then
-      // hold scroll for the reading window so a hard scroll can't skip it.
+      // it should read as appearing after the tint, not alongside it). Scroll
+      // stays locked for the shorter window so a hard scroll can't skip it,
+      // while the text itself lingers longer so it isn't cut off the instant
+      // scrolling resumes.
       if (!timelineIntroTriggeredRef.current && veilProgress >= 1) {
         timelineIntroTriggeredRef.current = true
         timelineIntroScrollLockRef.current = true
         setShowTimelineIntro(true)
         setTimeout(() => {
-          setShowTimelineIntro(false)
           timelineIntroScrollLockRef.current = false
-        }, TIMELINE_INTRO_FADE_MS + TIMELINE_INTRO_HOLD_MS)
+        }, TIMELINE_INTRO_FADE_MS + TIMELINE_INTRO_SCROLL_LOCK_MS)
+        setTimeout(() => {
+          setShowTimelineIntro(false)
+        }, TIMELINE_INTRO_FADE_MS + TIMELINE_INTRO_TEXT_HOLD_MS)
       }
 
       // While the timeline is pinned, page scroll drives horizontal motion of the track.
@@ -336,19 +341,26 @@ export default function Home() {
         const pinRect = pinEl.getBoundingClientRect()
         const relX = markerRect.left + markerRect.width / 2 - pinRect.left
         const relY = markerRect.top + markerRect.height / 2 - pinRect.top
-        const widgetOffset = 200
+        const widgetOffset = 90
         const widgetMaxWidth = 220
         const edgeMargin = 16
         const maxRelX = pinRect.width - widgetOffset - widgetMaxWidth - edgeMargin
-        const verticalNudge = 24
+        const verticalNudge = 75
         const activeTextIsAbove = nextIdx % 2 === 0
         widgetEl.style.left = `${Math.min(relX, maxRelX)}px`
         widgetEl.style.top = `${relY + (activeTextIsAbove ? verticalNudge : -verticalNudge)}px`
+
+        // Drive the line-fill from the active dot's real pixel position rather
+        // than raw scroll progress - the track's edge padding and per-item
+        // spacing mean progress isn't linear with where a dot actually lands
+        // on screen, so using progress directly made the fill drift out of
+        // sync with the dot it's supposed to lead up to.
+        const lineProgress = Math.min(Math.max(relX / pinRect.width, 0), 1)
+        pageRef.current?.style.setProperty("--timeline-progress", lineProgress.toString())
       }
 
       pageRef.current?.style.setProperty("--scroll-progress", eased.toString())
       pageRef.current?.style.setProperty("--veil-progress", veilEased.toString())
-      pageRef.current?.style.setProperty("--timeline-progress", timelineProgress.toString())
     }
 
     handleScroll()
@@ -428,7 +440,7 @@ export default function Home() {
           {showAbout && (
             <div className="about_me">
               <TextType
-                text={["Freshman @ UF.", "Python Enthusiast.", "The Weeknd Fanatic.", "Loves Coding <3.",]}
+                text={["Sophomore @ UF.", "Python Enthusiast.", "The Weeknd Fanatic.", "Loves Coding <3.",]}
                 typingSpeed={50}
                 pauseDuration={1000}
                 showCursor={true}
@@ -458,8 +470,8 @@ export default function Home() {
                     <img
                       src={songArtByHref[timelineEntries[activeIndex].song.href]}
                       alt=""
-                      width={96}
-                      height={96}
+                      width={120}
+                      height={120}
                     />
                   ) : (
                     <svg width="30" height="30" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
