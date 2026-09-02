@@ -5,6 +5,7 @@ import type { ComponentType } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import PillNavRaw from "../components/PillNav"
 import ScrollReveal, { type RevealItem } from "../components/ScrollReveal"
+import DriftWall, { type DriftWallItem } from "../components/DriftWall"
 
 type PillNavItem = { href: string; label: string; ariaLabel?: string }
 
@@ -144,6 +145,57 @@ const PROJECTS: Project[] = [
   },
 ]
 
+type ContactLink = {
+  label: string
+  value: string
+  href?: string
+}
+
+// Placeholder contact info — swap in real details once ready to publish.
+const CONTACT_LINKS: ContactLink[] = [
+  { label: "email", value: "yourname@example.com", href: "mailto:yourname@example.com" },
+  { label: "phone", value: "+1 (555) 012-3456", href: "tel:+15550123456" },
+  { label: "location", value: "Gainesville, FL" },
+  { label: "github", value: "github.com/yourhandle", href: "#" },
+  { label: "linkedin", value: "linkedin.com/in/yourhandle", href: "#" },
+]
+
+// Real photos, resized/compressed into public/personal-gallery/ (originals in
+// C:\Users\firep\OneDrive\Pictures\personal_porfolio_photo_wall). Titles are
+// alt/aria text only (DriftWall never renders them on-screen), derived from
+// each photo's capture date where the filename had one.
+const PERSONAL_GALLERY_ITEMS: DriftWallItem[] = [
+  { image: "/personal-gallery/photo-03.webp", title: "Jul 2025" },
+  { image: "/personal-gallery/photo-02.webp", title: "Apr 2025" },
+  { image: "/personal-gallery/photo-06.webp", title: "Snapshot" },
+  { image: "/personal-gallery/photo-04.webp", title: "Jul 2023" },
+  { image: "/personal-gallery/photo-05.webp", title: "Jul 2023" },
+  { image: "/personal-gallery/photo-01.webp", title: "Jul 2023" },
+  { image: "/personal-gallery/photo-07.webp", title: "Nov 2024" },
+  { image: "/personal-gallery/photo-08.webp", title: "Dec 2023" },
+  { image: "/personal-gallery/photo-09.webp", title: "Oct 2023" },
+  { image: "/personal-gallery/photo-10.webp", title: "Dec 2024" },
+  { image: "/personal-gallery/photo-11.webp", title: "Jul 2025" },
+  { image: "/personal-gallery/photo-12.webp", title: "Oct 2022" },
+  { image: "/personal-gallery/photo-13.webp", title: "Jul 2025" },
+  { image: "/personal-gallery/photo-14.webp", title: "Dec 2024" },
+  { image: "/personal-gallery/photo-15.webp", title: "Snapshot" },
+  { image: "/personal-gallery/photo-16.webp", title: "Snapshot" },
+  { image: "/personal-gallery/photo-17.webp", title: "Jul 2025" },
+  { image: "/personal-gallery/photo-18.webp", title: "Apr 2023" },
+  { image: "/personal-gallery/photo-19.webp", title: "Jul 2023" },
+  { image: "/personal-gallery/photo-20.webp", title: "Jun 2025" },
+  { image: "/personal-gallery/photo-21.webp", title: "Dec 2023" },
+  { image: "/personal-gallery/photo-22.webp", title: "Apr 2026" },
+  { image: "/personal-gallery/photo-23.webp", title: "Jul 2025" },
+  { image: "/personal-gallery/photo-24.webp", title: "Aug 2025" },
+  { image: "/personal-gallery/photo-25.webp", title: "Feb 2025" },
+  { image: "/personal-gallery/photo-26.webp", title: "Mar 2024" },
+  { image: "/personal-gallery/photo-27.webp", title: "Sep 2024" },
+  { image: "/personal-gallery/photo-28.webp", title: "Nov 2024" },
+  { image: "/personal-gallery/photo-29.webp", title: "Apr 2024" },
+]
+
 const VolleyballIcon = (
   <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3">
     <circle cx="50" cy="50" r="42" />
@@ -208,6 +260,8 @@ export default function Home() {
   const itemRefs = useRef<(HTMLLIElement | null)[]>([])
   const musicWidgetRef = useRef<HTMLDivElement | null>(null)
   const projectsRef = useRef<HTMLElement | null>(null)
+  const personalRef = useRef<HTMLDivElement | null>(null)
+  const contactRef = useRef<HTMLElement | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [trackDistance, setTrackDistance] = useState(0)
   const [songArtByHref, setSongArtByHref] = useState<Record<string, string>>({})
@@ -217,6 +271,8 @@ export default function Home() {
     setTerminalPaused(opaque)
   }, [])
   const timelineIntroTriggeredRef = useRef(false)
+  const showTimelineIntroRef = useRef(false)
+  const timelineIntroHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const timelineEntries = useMemo(
     () => [
       {
@@ -397,12 +453,15 @@ export default function Home() {
       // scrolling resumes.
       if (!timelineIntroTriggeredRef.current && veilProgress >= 1) {
         timelineIntroTriggeredRef.current = true
+        showTimelineIntroRef.current = true
         setShowTimelineIntro(true)
         attachScrollLock()
         setTimeout(() => {
           releaseScrollLock()
         }, TIMELINE_INTRO_FADE_MS + TIMELINE_INTRO_SCROLL_LOCK_MS)
-        setTimeout(() => {
+        timelineIntroHideTimeoutRef.current = setTimeout(() => {
+          timelineIntroHideTimeoutRef.current = null
+          showTimelineIntroRef.current = false
           setShowTimelineIntro(false)
         }, TIMELINE_INTRO_FADE_MS + TIMELINE_INTRO_TEXT_HOLD_MS)
       }
@@ -411,6 +470,18 @@ export default function Home() {
       const scrollRunway = trackDistance * TIMELINE_SCROLL_MULTIPLIER
       const timelineRaw = (window.scrollY - timelineTop) / Math.max(scrollRunway, 1)
       const timelineProgress = Math.min(Math.max(timelineRaw, 0), 1)
+
+      // Cut the intro text short (instead of waiting out its full hold timer)
+      // once the user scrolls past the pinned timeline - it shouldn't still
+      // be lingering on screen over the Projects section.
+      if (showTimelineIntroRef.current && timelineProgress >= 1) {
+        showTimelineIntroRef.current = false
+        setShowTimelineIntro(false)
+        if (timelineIntroHideTimeoutRef.current) {
+          clearTimeout(timelineIntroHideTimeoutRef.current)
+          timelineIntroHideTimeoutRef.current = null
+        }
+      }
       const offsetPx = timelineProgress * trackDistance
       if (trackRef.current) {
         trackRef.current.style.transform = `translateY(-50%) translateX(-${offsetPx}px)`
@@ -469,8 +540,34 @@ export default function Home() {
         pageRef.current?.style.setProperty("--timeline-progress", lineProgress.toString())
       }
 
+      // Bright/upbeat "outdoors" environment swap for the Personal section:
+      // rises to 1 as the transition spacer between Projects and Personal
+      // scrolls fully through the viewport - top to bottom - so a taller
+      // spacer directly means a slower fade, holds through the whole
+      // section, then falls back to 0 as Contact approaches so the site
+      // returns to its usual dark terminal theme. Driven the same way as
+      // veilProgress above (a plain 0-1 CSS var), with the actual crossfade
+      // handled by CSS transitions on the elements that read it.
+      const personalSpacerEl = personalRef.current
+      let personalEnterProgress = 0
+      if (personalSpacerEl) {
+        const rect = personalSpacerEl.getBoundingClientRect()
+        const spacerTravel = rect.height + window.innerHeight
+        const personalEnterRaw = (window.innerHeight - rect.top) / Math.max(spacerTravel, 1)
+        personalEnterProgress = Math.min(Math.max(personalEnterRaw, 0), 1)
+      }
+
+      const personalFadeStart = window.innerHeight * 0.85
+      const personalFadeEnd = window.innerHeight * 0.15
+      const contactTop = contactRef.current?.getBoundingClientRect().top ?? Infinity
+      const personalExitRaw = (contactTop - personalFadeEnd) / (personalFadeStart - personalFadeEnd)
+      const personalExitProgress = Math.min(Math.max(personalExitRaw, 0), 1)
+
+      const personalProgress = Math.min(personalEnterProgress, personalExitProgress)
+
       pageRef.current?.style.setProperty("--scroll-progress", eased.toString())
       pageRef.current?.style.setProperty("--veil-progress", veilEased.toString())
+      pageRef.current?.style.setProperty("--personal-progress", personalProgress.toString())
     }
 
     // Native 'scroll' events can fire far more often than the display can
@@ -543,6 +640,7 @@ export default function Home() {
       </div>
 
       <div className="parallax-veil" aria-hidden="true" />
+      <div className="personal-veil" aria-hidden="true" />
 
       <div
         className={`timeline-intro ${showTimelineIntro ? "is-visible" : ""}`}
@@ -689,22 +787,73 @@ export default function Home() {
         </section>
 
         <section id="personal" className="personal-section">
-          <div className="section personal-intro">
-            <h2 className="section-title">Personal</h2>
-            <p className="section-text">
-              When I am not coding, you will find me listening to The Weeknd, tweaking workflows, or testing new tech stacks.
-              I like learning by shipping and experimenting with ideas that feel a bit out of the ordinary.
-            </p>
+          <div className="personal-transition-spacer" ref={personalRef}>
+            <p className="personal-transition-text">transitioning to my personal life...</p>
+          </div>
+          <p className="personal-gallery-caption">A few moments along the way...</p>
+          <div className="personal-gallery">
+            <DriftWall
+              items={PERSONAL_GALLERY_ITEMS}
+              columns={7}
+              duplicateLastColumn
+              tileWidth={230}
+              tileHeight={160}
+              gap={16}
+              tilt={14}
+              turn={-7}
+              perspective={1400}
+              depth={140}
+              speed={30}
+              direction="up"
+              variance={0.4}
+              parallax={0.5}
+              lift={56}
+              fade={0.4}
+              dim={0.98}
+              overlayColor="#2b1a0f"
+              overlayOpacity={0.03}
+            />
           </div>
           <ScrollReveal items={PERSONAL_REVEAL_ITEMS} onOpaqueChange={handleRevealOpaqueChange} />
         </section>
 
-        <section id="contact" className="section contact-section">
+        <section id="contact" className="section contact-section" ref={contactRef}>
           <h2 className="section-title">Contact</h2>
           <p className="section-text">
-            Want to connect or collaborate? Send a note to yourname@example.com or reach
-            out through LinkedIn.
+            Got a project, an opportunity, or just want to talk shop? My inbox is open.
           </p>
+          <div className="contact-card">
+            <div className="contact-card-header">
+              <span className="project-status-dot project-status-dot--active" aria-hidden="true" />
+              <span className="project-status-label">online</span>
+            </div>
+            <p className="contact-path">
+              {"C:\\contact\\me"}
+              <span className="project-cursor" aria-hidden="true">_</span>
+            </p>
+            <ul className="contact-list">
+              {CONTACT_LINKS.map((item) => {
+                const isExternal = item.href?.startsWith("http")
+                return (
+                  <li className="contact-row" key={item.label}>
+                    <span className="contact-label">{`> ${item.label}:`}</span>
+                    {item.href ? (
+                      <a
+                        className="contact-value contact-link"
+                        href={item.href}
+                        target={isExternal ? "_blank" : undefined}
+                        rel={isExternal ? "noopener noreferrer" : undefined}
+                      >
+                        {item.value}
+                      </a>
+                    ) : (
+                      <span className="contact-value">{item.value}</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         </section>
       </main>
     </div>

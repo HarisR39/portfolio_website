@@ -18,6 +18,7 @@ html {
   --scroll-progress: 0;
   --veil-progress: 0;
   --projects-veil-progress: 0;
+  --personal-progress: 0;
 }
 
 .nav-holder {
@@ -108,6 +109,23 @@ html {
   mix-blend-mode: normal;
 }
 
+
+/* Bright, upbeat "outdoors" environment that crossfades in behind the
+   Personal section (see --personal-progress in page.tsx) and back out again
+   before Contact, so the dark terminal theme returns for the rest of the
+   site. Opacity is written every scroll frame; the transition below is what
+   turns those discrete writes into a smooth fade rather than a snap. */
+.personal-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--personal-progress, 0);
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, #8ecbf5 0%, #cdeaff 30%, #fff3d8 65%, #ffcf7a 100%);
+  transition: opacity 450ms ease;
+}
 
 .wall {
   position: absolute;
@@ -448,6 +466,73 @@ canvas {
   opacity: 1;
 }
 
+.contact-card {
+  margin-top: 36px;
+  max-width: 480px;
+  padding: 28px 30px 26px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.contact-card-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 18px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 0.95rem;
+}
+
+.contact-path {
+  margin: 0 0 20px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f4fff8;
+}
+
+.contact-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contact-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: Consolas, "Cascadia Code", "Courier New", monospace;
+  font-size: 1rem;
+  flex-wrap: wrap;
+}
+
+.contact-label {
+  color: rgb(167, 239, 158);
+  flex: 0 0 auto;
+}
+
+.contact-value {
+  color: rgba(196, 224, 206, 0.9);
+  word-break: break-word;
+}
+
+.contact-link {
+  text-decoration: none;
+  color: rgba(196, 224, 206, 0.9);
+  transition: color 200ms ease;
+}
+
+.contact-link:hover,
+.contact-link:focus-visible {
+  color: #a7ef9e;
+  text-decoration: underline;
+  outline: none;
+}
+
 .personal-section {
   position: relative;
   padding: 0;
@@ -455,8 +540,153 @@ canvas {
   margin: 0;
 }
 
-.personal-intro {
-  padding-bottom: 48px;
+/* Tall, mostly-empty scroll stretch between Projects and Personal. Its own
+   height IS the fade duration - see personalEnterProgress in page.tsx, which
+   measures this element traversing the viewport top to bottom - so making it
+   taller directly makes the background crossfade slower. */
+.personal-transition-spacer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150vh;
+  padding: 0 8vw;
+  text-align: center;
+}
+
+.personal-transition-text {
+  margin: 0;
+  font-family: 'League Spartan', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: clamp(1.1rem, 2.6vw, 1.8rem);
+  color: #ffffff;
+}
+
+.personal-gallery-caption {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0 8vw 64px;
+  text-align: center;
+  font-family: 'League Spartan', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: clamp(1rem, 2.2vw, 1.4rem);
+  color: #ffffff;
+}
+
+.personal-gallery {
+  position: relative;
+  height: 130svh;
+  min-height: 480px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.drift-wall {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.drift-wall-plane {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  flex-direction: row;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.drift-wall-column {
+  position: relative;
+  width: calc(var(--dw-tile-w) + var(--dw-gap));
+  transform-style: preserve-3d;
+}
+
+.drift-wall-track {
+  display: flex;
+  flex-direction: column;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.drift-wall-tile {
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  height: calc(var(--dw-tile-h) + var(--dw-gap));
+  cursor: pointer;
+  outline: none;
+  transform-style: preserve-3d;
+  text-decoration: none;
+  color: inherit;
+}
+
+.drift-wall-inner {
+  pointer-events: none;
+  position: absolute;
+  inset: calc(var(--dw-gap) / 2);
+  display: block;
+  overflow: hidden;
+  background: #0b0b12;
+  border-radius: var(--dw-radius);
+  opacity: var(--dw-dim);
+  transform: translateZ(0);
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drift-wall-tile.is-active .drift-wall-inner,
+.drift-wall-tile:focus-visible .drift-wall-inner {
+  opacity: 1;
+  transform: translateZ(var(--dw-lift));
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7);
+}
+
+.drift-wall-tile:focus-visible .drift-wall-inner {
+  box-shadow:
+    0 24px 60px -18px rgba(0, 0, 0, 0.7),
+    0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
+.drift-wall-img {
+  display: block;
+  height: 100%;
+  width: 100%;
+  user-select: none;
+  object-fit: cover;
+  filter: grayscale(var(--dw-gray)) saturate(0.92);
+  transition: filter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drift-wall-tile.is-active .drift-wall-img,
+.drift-wall-tile:focus-visible .drift-wall-img {
+  filter: grayscale(0) saturate(1.05);
+}
+
+.drift-wall-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: var(--dw-overlay);
+  opacity: var(--dw-overlay-opacity, 0.42);
+  transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drift-wall-tile.is-active .drift-wall-overlay,
+.drift-wall-tile:focus-visible .drift-wall-overlay {
+  opacity: 0;
 }
 
 .scroll-reveal-spacer {
